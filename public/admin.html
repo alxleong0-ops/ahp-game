@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>权重大作战 - 管理后台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            secondary: '#ec4899',
+            success: '#10b981',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+            dark: '#1e293b',
+            light: '#f8fafc'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen text-light">
+  <div class="container mx-auto px-4 py-8">
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold mb-2">权重大作战 - 管理后台</h1>
+      <p class="text-gray-400">创建决策项目，生成投票二维码，实时监控结果</p>
+    </div>
+
+    <!-- 创建项目表单 -->
+    <div id="create-project-section" class="max-w-2xl mx-auto bg-dark/60 backdrop-blur-sm rounded-xl p-6 mb-8">
+      <h2 class="text-xl font-bold mb-4 flex items-center">
+        <i class="fa fa-plus-circle text-primary mr-2"></i> 创建新决策项目
+      </h2>
+      
+      <div class="mb-4">
+        <label class="block text-sm font-medium mb-2 text-gray-300">项目名称</label>
+        <input 
+          type="text" 
+          id="project-name" 
+          class="w-full bg-dark/80 border border-primary/30 rounded-lg p-3 text-light focus:outline-none focus:ring-2 focus:ring-primary/50"
+          placeholder="例如：产品功能优先级决策"
+        >
+      </div>
+      
+      <div class="mb-6">
+        <label class="block text-sm font-medium mb-2 text-gray-300">决策因素（每行一个）</label>
+        <textarea 
+          id="factors-input" 
+          class="w-full h-48 bg-dark/80 border border-primary/30 rounded-lg p-3 text-light focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+          placeholder="例如：
+价格
+性能
+外观
+品牌
+售后服务
+电池续航"
+        ></textarea>
+      </div>
+      
+      <button id="create-project-btn" class="w-full bg-primary hover:bg-primary/80 text-white font-bold py-3 px-4 rounded-lg transition-colors">
+        <i class="fa fa-magic mr-2"></i> 创建项目并生成二维码
+      </button>
+    </div>
+
+    <!-- 项目管理面板 -->
+    <div id="project-panel" class="max-w-4xl mx-auto bg-dark/60 backdrop-blur-sm rounded-xl p-6 hidden">
+      <div class="flex justify-between items-center mb-6">
+        <h2 id="project-title" class="text-xl font-bold">项目名称</h2>
+        <button id="new-project-btn" class="bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+          <i class="fa fa-plus mr-2"></i> 新建项目
+        </button>
+      </div>
+      
+      <!-- 二维码和投票链接 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div class="bg-dark/80 rounded-xl p-4 text-center">
+          <h3 class="font-bold mb-3">投票二维码</h3>
+          <div id="qrcode-container" class="flex justify-center">
+            <div id="qrcode-loading" class="text-gray-400">正在生成二维码...</div>
+            <img id="qrcode-image" alt="投票二维码" style="max-width: 300px; display: none;">
+          </div>
+          <p class="text-sm text-gray-400 mt-2">让评委扫码进入投票</p>
+        </div>
+        
+        <div class="bg-dark/80 rounded-xl p-4">
+          <h3 class="font-bold mb-3">投票链接</h3>
+          <div class="flex">
+            <input 
+              type="text" 
+              id="vote-link" 
+              class="flex-1 bg-dark border border-gray-600 rounded-l-lg p-2 text-sm"
+              readonly
+            >
+            <button id="copy-link-btn" class="bg-primary hover:bg-primary/80 text-white px-3 rounded-r-lg">
+              <i class="fa fa-copy"></i>
+            </button>
+          </div>
+          
+          <div class="mt-4">
+            <h4 class="font-bold mb-2">实时投票统计</h4>
+            <p>总参与人数: <span id="total-judges" class="text-primary font-bold">0</span></p>
+            <p>已完成人数: <span id="completed-judges" class="text-success font-bold">0</span></p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 操作按钮 -->
+      <div class="text-center mb-8">
+        <button id="stop-voting-btn" class="bg-danger hover:bg-danger/80 text-white font-bold py-3 px-8 rounded-lg transition-colors text-lg">
+          <i class="fa fa-stop-circle mr-2"></i> 停止投票并计算结果
+        </button>
+      </div>
+      
+      <!-- 结果展示区域 -->
+      <div id="results-section" class="hidden">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+          <i class="fa fa-trophy text-warning mr-2"></i> 最终结果
+        </h3>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <!-- 排名列表 -->
+          <div>
+            <h4 class="font-bold mb-3">因素排名</h4>
+            <div id="ranking-list" class="space-y-2">
+              <!-- 排名将在这里显示 -->
+            </div>
+          </div>
+          
+          <!-- 一致性检验 -->
+          <div>
+            <h4 class="font-bold mb-3">一致性检验</h4>
+            <div id="consistency-result" class="p-4 rounded-lg">
+              <!-- 一致性结果将在这里显示 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentProjectId = null;
+    let statsInterval = null;
+
+    // DOM元素
+    const createProjectSection = document.getElementById('create-project-section');
+    const projectPanel = document.getElementById('project-panel');
+    const projectNameInput = document.getElementById('project-name');
+    const factorsInput = document.getElementById('factors-input');
+    const createProjectBtn = document.getElementById('create-project-btn');
+    const projectTitle = document.getElementById('project-title');
+    const qrcodeLoading = document.getElementById('qrcode-loading');
+    const qrcodeImage = document.getElementById('qrcode-image');
+    const voteLink = document.getElementById('vote-link');
+    const copyLinkBtn = document.getElementById('copy-link-btn');
+    const totalJudgesEl = document.getElementById('total-judges');
+    const completedJudgesEl = document.getElementById('completed-judges');
+    const stopVotingBtn = document.getElementById('stop-voting-btn');
+    const resultsSection = document.getElementById('results-section');
+    const rankingList = document.getElementById('ranking-list');
+    const consistencyResult = document.getElementById('consistency-result');
+    const newProjectBtn = document.getElementById('new-project-btn');
+
+    // 创建项目
+    createProjectBtn.addEventListener('click', async () => {
+      const name = projectNameInput.value.trim();
+      const factorsText = factorsInput.value.trim();
+      
+      if (!name) {
+        alert('请输入项目名称');
+        return;
+      }
+      
+      if (!factorsText) {
+        alert('请输入决策因素');
+        return;
+      }
+      
+      const factors = factorsText.split('\n').filter(f => f.trim() !== '');
+      
+      if (factors.length < 2) {
+        alert('请至少输入2个因素');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/projects', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, factors })
+        });
+        
+        const project = await response.json();
+        currentProjectId = project.id;
+        
+        // 显示项目面板
+        createProjectSection.classList.add('hidden');
+        projectPanel.classList.remove('hidden');
+        projectTitle.textContent = name;
+        
+        // 生成投票链接
+        const baseUrl = window.location.origin;
+        const voteUrl = `${baseUrl}/vote.html?id=${currentProjectId}`;
+        voteLink.value = voteUrl;
+        
+        // 显示加载状态
+        qrcodeLoading.style.display = 'block';
+        qrcodeImage.style.display = 'none';
+        
+        // 加载二维码 - 修复：直接使用img标签加载
+        qrcodeImage.onload = function() {
+          qrcodeLoading.style.display = 'none';
+          qrcodeImage.style.display = 'block';
+        };
+        
+        qrcodeImage.onerror = function() {
+          qrcodeLoading.textContent = '二维码生成失败，请点击链接复制';
+          qrcodeLoading.style.color = '#ef4444';
+        };
+        
+        qrcodeImage.src = `/api/qrcode?url=${encodeURIComponent(voteUrl)}`;
+        
+        // 开始定时获取统计数据
+        startStatsPolling();
+        
+      } catch (error) {
+        console.error('Error creating project:', error);
+        alert('创建项目失败，请重试');
+      }
+    });
+
+    // 复制链接
+    copyLinkBtn.addEventListener('click', () => {
+      voteLink.select();
+      document.execCommand('copy');
+      alert('链接已复制到剪贴板');
+    });
+
+    // 开始定时获取统计数据
+    function startStatsPolling() {
+      // 立即获取一次
+      getStats();
+      
+      // 每5秒获取一次
+      statsInterval = setInterval(getStats, 5000);
+    }
+
+    // 获取统计数据
+    async function getStats() {
+      if (!currentProjectId) return;
+      
+      try {
+        const response = await fetch(`/api/projects/${currentProjectId}/stats`);
+        const stats = await response.json();
+        
+        totalJudgesEl.textContent = stats.total_judges;
+        completedJudgesEl.textContent = stats.completed_judges;
+        
+      } catch (error) {
+        console.error('Error getting stats:', error);
+      }
+    }
+
+    // 停止投票并计算结果
+    stopVotingBtn.addEventListener('click', async () => {
+      if (!currentProjectId) return;
+      
+      if (!confirm('确定要停止投票吗？停止后将无法再提交新的投票。')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch(`/api/projects/${currentProjectId}/stop`, {
+          method: 'POST'
+        });
+        
+        if (!response.ok) {
+          const error = await response.json();
+          alert(error.error);
+          return;
+        }
+        
+        const results = await response.json();
+        
+        // 停止定时获取统计数据
+        clearInterval(statsInterval);
+        
+        // 显示结果
+        showResults(results);
+        
+        // 禁用停止按钮
+        stopVotingBtn.disabled = true;
+        stopVotingBtn.textContent = '投票已结束';
+        
+      } catch (error) {
+        console.error('Error stopping voting:', error);
+        alert('计算结果失败，请重试');
+      }
+    });
+
+    // 显示结果
+    function showResults(results) {
+      resultsSection.classList.remove('hidden');
+      
+      // 显示排名
+      rankingList.innerHTML = '';
+      results.ranked_factors.forEach((item, index) => {
+        const rankClass = index === 0 ? 'bg-warning/20 border-warning/50' : 
+                          index === 1 ? 'bg-gray-400/20 border-gray-400/50' : 
+                          index === 2 ? 'bg-orange-700/20 border-orange-700/50' : 
+                          'bg-dark/80 border-gray-700';
+        
+        const medalIcon = index === 0 ? '<i class="fa fa-trophy text-warning mr-2"></i>' :
+                           index === 1 ? '<i class="fa fa-medal text-gray-400 mr-2"></i>' :
+                           index === 2 ? '<i class="fa fa-medal text-orange-700 mr-2"></i>' :
+                           `<span class="w-6 inline-block text-center mr-2">${item.rank}</span>`;
+        
+        const rankItem = document.createElement('div');
+        rankItem.className = `flex justify-between items-center p-3 rounded-lg border ${rankClass}`;
+        rankItem.innerHTML = `
+          <div class="flex items-center">
+            ${medalIcon}
+            <span>${item.name}</span>
+          </div>
+          <span class="font-bold">${(item.weight * 100).toFixed(2)}%</span>
+        `;
+        rankingList.appendChild(rankItem);
+      });
+      
+      // 显示一致性结果
+      if (results.consistency.isConsistent) {
+        consistencyResult.className = 'mt-6 p-4 rounded-lg bg-success/20 border border-success/50';
+        consistencyResult.innerHTML = `
+          <h4 class="font-bold text-success mb-2"><i class="fa fa-check-circle mr-2"></i>一致性检验通过</h4>
+          <p class="text-sm text-gray-300">
+            参与评委人数: ${results.total_judges}<br>
+            最大特征值 λmax = ${results.consistency.lambdaMax}<br>
+            一致性指标 CI = ${results.consistency.CI}<br>
+            一致性比例 CR = ${results.consistency.CR} < 0.1
+          </p>
+        `;
+      } else {
+        consistencyResult.className = 'mt-6 p-4 rounded-lg bg-danger/20 border border-danger/50';
+        consistencyResult.innerHTML = `
+          <h4 class="font-bold text-danger mb-2"><i class="fa fa-exclamation-triangle mr-2"></i>一致性检验不通过</h4>
+          <p class="text-sm text-gray-300">
+            参与评委人数: ${results.total_judges}<br>
+            最大特征值 λmax = ${results.consistency.lambdaMax}<br>
+            一致性指标 CI = ${results.consistency.CI}<br>
+            一致性比例 CR = ${results.consistency.CR} ≥ 0.1<br>
+            <span class="text-warning">建议重新检查打分结果</span>
+          </p>
+        `;
+      }
+    }
+
+    // 新建项目
+    newProjectBtn.addEventListener('click', () => {
+      if (confirm('确定要创建新项目吗？当前项目的数据将不会丢失。')) {
+        location.reload();
+      }
+    });
+  </script>
+</body>
+</html>

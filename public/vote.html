@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>权重大作战 - 投票</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#6366f1',
+            secondary: '#ec4899',
+            success: '#10b981',
+            warning: '#f59e0b',
+            danger: '#ef4444',
+            dark: '#1e293b',
+            light: '#f8fafc'
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen text-light">
+  <div class="container mx-auto px-4 py-6">
+    <div class="text-center mb-6">
+      <h1 class="text-2xl font-bold mb-2">权重大作战</h1>
+      <p id="project-name" class="text-gray-400">正在加载项目...</p>
+    </div>
+
+    <!-- 投票界面 -->
+    <div id="voting-section" class="max-w-md mx-auto bg-dark/60 backdrop-blur-sm rounded-xl p-6">
+      <div class="text-center mb-6">
+        <p class="text-gray-400">
+          对决 <span id="current-battle" class="text-secondary font-bold">1</span> / <span id="total-battles">0</span>
+        </p>
+        <div class="w-full bg-dark/50 rounded-full h-2 mt-2 overflow-hidden">
+          <div id="battle-progress" class="bg-gradient-to-r from-secondary to-warning h-full rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- 对战界面 -->
+      <div class="grid grid-cols-2 gap-4 items-center mb-6">
+        <!-- 因素A -->
+        <div class="bg-primary/20 rounded-xl p-4 text-center">
+          <div class="w-16 h-16 bg-primary/30 rounded-full flex items-center justify-center mx-auto mb-2">
+            <i class="fa fa-user-shield text-2xl text-primary"></i>
+          </div>
+          <h3 id="factor-a" class="text-lg font-bold">因素A</h3>
+        </div>
+
+        <!-- VS -->
+        <div class="text-center">
+          <div class="text-3xl font-bold text-warning animate-pulse">VS</div>
+        </div>
+
+        <!-- 因素B -->
+        <div class="bg-secondary/20 rounded-xl p-4 text-center">
+          <div class="w-16 h-16 bg-secondary/30 rounded-full flex items-center justify-center mx-auto mb-2">
+            <i class="fa fa-user-ninja text-2xl text-secondary"></i>
+          </div>
+          <h3 id="factor-b" class="text-lg font-bold">因素B</h3>
+        </div>
+      </div>
+
+      <!-- 评分按钮 -->
+      <div class="mb-6">
+        <p class="text-center text-gray-400 mb-4 text-sm">
+          <span id="left-factor-name" class="text-primary font-bold">因素A</span> 相对于 <span id="right-factor-name" class="text-secondary font-bold">因素B</span>
+        </p>
+        
+        <div class="grid grid-cols-5 gap-2 mb-4">
+          <div class="score-btn bg-primary hover:bg-primary/80" data-score="5">
+            <div class="text-center">
+              <div class="text-xl font-bold">5</div>
+              <div class="text-xs">明显<br>重要</div>
+            </div>
+          </div>
+          <div class="score-btn bg-primary hover:bg-primary/80" data-score="3">
+            <div class="text-center">
+              <div class="text-xl font-bold">3</div>
+              <div class="text-xs">稍微<br>重要</div>
+            </div>
+          </div>
+          <div class="score-btn bg-success hover:bg-success/80" data-score="1">
+            <div class="text-center">
+              <div class="text-xl font-bold">1</div>
+              <div class="text-xs">同等<br>重要</div>
+            </div>
+          </div>
+          <div class="score-btn bg-secondary hover:bg-secondary/80" data-score="1/3">
+            <div class="text-center">
+              <div class="text-xl font-bold">1/3</div>
+              <div class="text-xs">稍微<br>不重要</div>
+            </div>
+          </div>
+          <div class="score-btn bg-secondary hover:bg-secondary/80" data-score="1/5">
+            <div class="text-center">
+              <div class="text-xl font-bold">1/5</div>
+              <div class="text-xs">明显<br>不重要</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-center">
+        <button id="next-battle-btn" class="w-full bg-secondary hover:bg-secondary/80 text-white font-bold py-3 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+          下一场对决 <i class="fa fa-arrow-right ml-2"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- 完成界面 -->
+    <div id="completed-section" class="max-w-md mx-auto bg-dark/60 backdrop-blur-sm rounded-xl p-6 text-center hidden">
+      <div class="inline-block p-4 bg-success/20 rounded-full mb-4">
+        <i class="fa fa-check-circle text-4xl text-success"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-2">投票完成！</h2>
+      <p class="text-gray-400 mb-6">感谢你的参与，结果将在投票结束后公布。</p>
+      <button id="restart-btn" class="bg-primary hover:bg-primary/80 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+        重新投票
+      </button>
+    </div>
+
+    <!-- 投票已结束界面 -->
+    <div id="ended-section" class="max-w-md mx-auto bg-dark/60 backdrop-blur-sm rounded-xl p-6 text-center hidden">
+      <div class="inline-block p-4 bg-warning/20 rounded-full mb-4">
+        <i class="fa fa-clock-o text-4xl text-warning"></i>
+      </div>
+      <h2 class="text-2xl font-bold mb-2">投票已结束</h2>
+      <p class="text-gray-400">这个决策项目的投票已经结束了。</p>
+    </div>
+  </div>
+
+  <script>
+    let projectId = null;
+    let factors = [];
+    let battles = [];
+    let currentBattle = 0;
+    let matrix = [];
+    let judgeId = null;
+    let selectedScore = null;
+
+    // DOM元素
+    const votingSection = document.getElementById('voting-section');
+    const completedSection = document.getElementById('completed-section');
+    const endedSection = document.getElementById('ended-section');
+    const projectNameEl = document.getElementById('project-name');
+    const currentBattleEl = document.getElementById('current-battle');
+    const totalBattlesEl = document.getElementById('total-battles');
+    const battleProgress = document.getElementById('battle-progress');
+    const factorAEl = document.getElementById('factor-a');
+    const factorBEl = document.getElementById('factor-b');
+    const leftFactorNameEl = document.getElementById('left-factor-name');
+    const rightFactorNameEl = document.getElementById('right-factor-name');
+    const scoreBtns = document.querySelectorAll('.score-btn[data-score]');
+    const nextBattleBtn = document.getElementById('next-battle-btn');
+    const restartBtn = document.getElementById('restart-btn');
+
+    // 初始化
+    async function init() {
+      // 从URL获取项目ID
+      const urlParams = new URLSearchParams(window.location.search);
+      projectId = urlParams.get('id');
+      
+      if (!projectId) {
+        alert('无效的投票链接');
+        return;
+      }
+      
+      // 生成唯一的评委ID
+      judgeId = localStorage.getItem(`judge_${projectId}`);
+      if (!judgeId) {
+        judgeId = Math.random().toString(36).substring(2, 15);
+        localStorage.setItem(`judge_${projectId}`, judgeId);
+      }
+      
+      try {
+        // 获取项目信息
+        const response = await fetch(`/api/projects/${projectId}`);
+        
+        if (!response.ok) {
+          throw new Error('Project not found');
+        }
+        
+        const project = await response.json();
+        
+        if (project.status !== 'active') {
+          showEnded();
+          return;
+        }
+        
+        projectNameEl.textContent = project.name;
+        factors = project.factors;
+        
+        // 生成所有两两对比组合
+        battles = [];
+        for (let i = 0; i < factors.length; i++) {
+          for (let j = i + 1; j < factors.length; j++) {
+            battles.push([i, j]);
+          }
+        }
+        
+        // 初始化判断矩阵
+        matrix = Array(factors.length).fill().map(() => Array(factors.length).fill(1));
+        
+        // 更新UI
+        totalBattlesEl.textContent = battles.length;
+        
+        // 加载第一场对决
+        loadBattle();
+        
+      } catch (error) {
+        console.error('Error loading project:', error);
+        alert('加载项目失败，请检查链接是否正确');
+      }
+    }
+
+    // 加载当前对决
+    function loadBattle() {
+      if (currentBattle >= battles.length) {
+        // 所有对决完成
+        submitVote(true);
+        showCompleted();
+        return;
+      }
+
+      const [i, j] = battles[currentBattle];
+      factorAEl.textContent = factors[i];
+      factorBEl.textContent = factors[j];
+      leftFactorNameEl.textContent = factors[i];
+      rightFactorNameEl.textContent = factors[j];
+      currentBattleEl.textContent = currentBattle + 1;
+      
+      // 更新进度
+      const progress = (currentBattle / battles.length) * 100;
+      battleProgress.style.width = `${progress}%`;
+      
+      // 重置选择
+      selectedScore = null;
+      scoreBtns.forEach(btn => {
+        btn.classList.remove('active');
+      });
+      nextBattleBtn.disabled = true;
+    }
+
+    // 选择分数
+    scoreBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        // 移除之前的选择
+        scoreBtns.forEach(b => {
+          b.classList.remove('active');
+        });
+
+        // 标记当前选择
+        selectedScore = btn.dataset.score;
+        btn.classList.add('active');
+
+        // 启用下一场按钮
+        nextBattleBtn.disabled = false;
+      });
+    });
+
+    // 下一场对决
+    nextBattleBtn.addEventListener('click', () => {
+      if (selectedScore === null) return;
+
+      const [i, j] = battles[currentBattle];
+      let score;
+      
+      // 解析分数
+      if (selectedScore.includes('/')) {
+        const parts = selectedScore.split('/');
+        score = parseInt(parts[0]) / parseInt(parts[1]);
+      } else {
+        score = parseInt(selectedScore);
+      }
+
+      // 填充矩阵
+      matrix[i][j] = score;
+      matrix[j][i] = 1 / score;
+      
+      // 保存进度
+      submitVote(false);
+      
+      // 下一场对决
+      currentBattle++;
+      loadBattle();
+    });
+
+    // 提交投票
+    async function submitVote(completed) {
+      try {
+        await fetch(`/api/projects/${projectId}/votes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            judge_id: judgeId,
+            matrix: matrix,
+            completed: completed
+          })
+        });
+      } catch (error) {
+        console.error('Error submitting vote:', error);
+      }
+    }
+
+    // 显示完成界面
+    function showCompleted() {
+      votingSection.classList.add('hidden');
+      completedSection.classList.remove('hidden');
+    }
+
+    // 显示已结束界面
+    function showEnded() {
+      votingSection.classList.add('hidden');
+      endedSection.classList.remove('hidden');
+    }
+
+    // 重新投票
+    restartBtn.addEventListener('click', () => {
+      currentBattle = 0;
+      matrix = Array(factors.length).fill().map(() => Array(factors.length).fill(1));
+      completedSection.classList.add('hidden');
+      votingSection.classList.remove('hidden');
+      loadBattle();
+    });
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+
+  <style>
+    .score-btn {
+      padding: 12px 8px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      cursor: pointer;
+    }
+    .score-btn:hover {
+      transform: scale(1.05);
+    }
+    .score-btn.active {
+      transform: scale(1.1);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.7);
+    }
+  </style>
+</body>
+</html>
